@@ -7,3 +7,4 @@ echo "Collecting static files..."
 python3 manage.py collectstatic --noinput --clear
 mkdir -p staticfiles/static
 cp -r static/* staticfiles/static/
+
