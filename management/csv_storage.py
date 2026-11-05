@@ -7,16 +7,18 @@ This module provides reusable, safe helper functions to:
 - Write and append records safely using csv.DictWriter.
 - Update and delete records safely using atomic file replacement.
 - Generate unique sequential IDs (e.g., CUST101, ITEM101, ORD1001).
+- Support serverless environments (like Vercel) by falling back to /tmp if data/ is read-only.
 """
 
 import os
 import csv
+import shutil
 import tempfile
 from pathlib import Path
 from django.conf import settings
 
-# Directory where CSV files are saved
-DATA_DIR = Path(getattr(settings, 'DATA_DIR', Path(__file__).resolve().parent.parent / 'data'))
+# Base directory where CSV files are saved in the project repository
+REPO_DATA_DIR = Path(getattr(settings, 'DATA_DIR', Path(__file__).resolve().parent.parent / 'data'))
 
 # Schema definition for all CSV files
 CSV_SCHEMAS = {
@@ -27,17 +29,45 @@ CSV_SCHEMAS = {
 }
 
 
+def get_data_dir() -> Path:
+    """
+    Return the active writable data directory.
+    In serverless platforms (e.g. Vercel) where the deployment directory is read-only,
+    this automatically falls back to /tmp/restaurant_data and copies starter CSV files.
+    """
+    is_vercel = os.environ.get('VERCEL') == '1' or 'VERCEL' in os.environ
+    is_writable = os.access(REPO_DATA_DIR, os.W_OK) if REPO_DATA_DIR.exists() else False
+
+    if is_vercel or not is_writable:
+        tmp_dir = Path('/tmp/restaurant_data')
+        if not tmp_dir.exists():
+            tmp_dir.mkdir(parents=True, exist_ok=True)
+            # Copy starter files from repo data directory
+            if REPO_DATA_DIR.exists():
+                for f in REPO_DATA_DIR.glob('*.csv'):
+                    target_file = tmp_dir / f.name
+                    if not target_file.exists():
+                        try:
+                            shutil.copy2(f, target_file)
+                        except Exception:
+                            pass
+        return tmp_dir
+
+    return REPO_DATA_DIR
+
+
 def get_file_path(filename: str) -> Path:
-    """Return the absolute Path for a given CSV filename inside data/."""
-    return DATA_DIR / filename
+    """Return the absolute Path for a given CSV filename inside the active data directory."""
+    return get_data_dir() / filename
 
 
 def init_storage():
     """
-    Ensure the data/ directory exists and all required CSV files
+    Ensure the data directory exists and all required CSV files
     are initialized with their proper headers.
     """
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    data_dir = get_data_dir()
+    data_dir.mkdir(parents=True, exist_ok=True)
 
     for filename, headers in CSV_SCHEMAS.items():
         file_path = get_file_path(filename)
@@ -180,4 +210,3 @@ def generate_new_id(filename: str, id_field: str, prefix: str = 'ID', start_num:
                 pass
 
     return f"{prefix}{max_num + 1}"
-

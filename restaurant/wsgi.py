@@ -9,3 +9,5 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'restaurant.settings')
 
 application = get_wsgi_application()
 
+# Alias for serverless platforms like Vercel
+app = application
