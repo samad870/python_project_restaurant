@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block title %}Customers - The Golden Spoon Restaurant{% endblock %}
+{% block page_heading %}Customer Management{% endblock %}
+{% block page_subheading %}Register, search, edit, and manage restaurant customer records{% endblock %}
+
+{% block content %}
+<div class="crud-grid">
+  <!-- Left Side: Add / Edit Customer Form -->
+  <div class="card">
+    <div class="card-header">
+      <h3>
+        {% if customer_to_edit %}
+          <span>✏️</span> Edit Customer ({{ customer_to_edit.customer_id }})
+        {% else %}
+          <span>➕</span> Add New Customer
+        {% endif %}
+      </h3>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{% url 'customer_list' %}">
+        {% csrf_token %}
+        {% if customer_to_edit %}
+          <input type="hidden" name="action" value="edit">
+          <input type="hidden" name="customer_id" value="{{ customer_to_edit.customer_id }}">
+        {% else %}
+          <input type="hidden" name="action" value="add">
+        {% endif %}
+
+        <div class="form-group">
+          <label for="name">Customer Full Name *</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            class="form-control"
+            placeholder="e.g. Rahul Sharma"
+            value="{% if customer_to_edit %}{{ customer_to_edit.name }}{% endif %}"
+            required
+          >
+          <small>Must be at least 2 characters.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Phone Number (10 Digits) *</label>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            class="form-control"
+            placeholder="e.g. 9876543210"
+            maxlength="10"
+            pattern="[0-9]{10}"
+            value="{% if customer_to_edit %}{{ customer_to_edit.phone }}{% endif %}"
+            required
+          >
+          <small>Enter a valid 10-digit mobile number.</small>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">
+            {% if customer_to_edit %}
+              Update Customer
+            {% else %}
+              Save Customer
+            {% endif %}
+          </button>
+          {% if customer_to_edit %}
+            <a href="{% url 'customer_list' %}" class="btn btn-secondary">Cancel</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Right Side: Search & Customers Table -->
+  <div class="card">
+    <div class="card-header">
+      <h3><span>👥</span> Customer Records ({{ total_count }})</h3>
+    </div>
+    <div class="card-body">
+      <!-- Search Filter Bar -->
+      <form method="GET" action="{% url 'customer_list' %}" class="filter-bar">
+        <div class="search-box">
+          <input
+            type="text"
+            name="q"
+            class="form-control"
+            placeholder="Search by name or phone..."
+            value="{{ search_query }}"
+          >
+          <button type="submit" class="btn btn-secondary">Search</button>
+          {% if search_query %}
+            <a href="{% url 'customer_list' %}" class="btn btn-secondary btn-sm">Reset</a>
+          {% endif %}
+        </div>
+      </form>
+
+      <!-- Customers Table -->
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Customer ID</th>
+              <th>Full Name</th>
+              <th>Phone Number</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for customer in customers %}
+            <tr>
+              <td><strong>{{ customer.customer_id }}</strong></td>
+              <td>{{ customer.name }}</td>
+              <td>{{ customer.phone }}</td>
+              <td>
+                <div style="display: flex; gap: 6px;">
+                  <a
+                    href="{% url 'customer_list' %}?edit={{ customer.customer_id }}"
+                    class="btn btn-secondary btn-sm"
+                    title="Edit Customer"
+                  >
+                    ✏️ Edit
+                  </a>
+
+                  <form
+                    method="POST"
+                    action="{% url 'customer_delete' customer.customer_id %}"
+                    onsubmit="return confirm('Are you sure you want to delete customer {{ customer.name }} ({{ customer.customer_id }})?');"
+                    style="display: inline;"
+                  >
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm" title="Delete Customer">
+                      🗑️ Delete
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" style="text-align: center; padding: 24px; color: var(--text-muted);">
+                {% if search_query %}
+                  No customers found matching "<strong>{{ search_query }}</strong>".
+                {% else %}
+                  No customers recorded yet. Add your first customer using the form on the left.
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

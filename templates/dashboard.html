@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - The Golden Spoon Restaurant{% endblock %}
+{% block page_heading %}Restaurant Dashboard{% endblock %}
+{% block page_subheading %}Live business summary loaded directly from CSV records{% endblock %}
+
+{% block content %}
+<!-- Stat Cards Grid -->
+<div class="stats-grid">
+  <!-- Total Customers -->
+  <div class="stat-card">
+    <div class="stat-info">
+      <span>Total Customers</span>
+      <h3>{{ stats.total_customers }}</h3>
+    </div>
+    <div class="stat-icon orange">👥</div>
+  </div>
+
+  <!-- Total Menu Items -->
+  <div class="stat-card">
+    <div class="stat-info">
+      <span>Menu Items</span>
+      <h3>{{ stats.total_menu_items }}</h3>
+    </div>
+    <div class="stat-icon blue">🍔</div>
+  </div>
+
+  <!-- Total Orders -->
+  <div class="stat-card">
+    <div class="stat-info">
+      <span>Total Orders</span>
+      <h3>{{ stats.total_orders }}</h3>
+    </div>
+    <div class="stat-icon purple">📋</div>
+  </div>
+
+  <!-- Total Sales (Excluding Cancelled) -->
+  <div class="stat-card">
+    <div class="stat-info">
+      <span>Total Sales</span>
+      <h3>₹{{ stats.total_sales }}</h3>
+    </div>
+    <div class="stat-icon green">💰</div>
+  </div>
+</div>
+
+<!-- Quick Navigation Bar -->
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <h3><span>⚡</span> Quick Management Shortcuts</h3>
+  </div>
+  <div class="card-body" style="display: flex; gap: 14px; flex-wrap: wrap;">
+    <a href="{% url 'order_create' %}" class="btn btn-primary">
+      <span>➕</span> Place New Order
+    </a>
+    <a href="{% url 'customer_list' %}" class="btn btn-secondary">
+      <span>👥</span> Manage Customers
+    </a>
+    <a href="{% url 'menu_list' %}" class="btn btn-secondary">
+      <span>🍔</span> Manage Food Menu
+    </a>
+    <a href="{% url 'order_list' %}" class="btn btn-secondary">
+      <span>📋</span> View All Orders
+    </a>
+    <a href="{% url 'billing' %}" class="btn btn-secondary">
+      <span>🧾</span> Billing & Receipts
+    </a>
+  </div>
+</div>
+
+<!-- Recent Orders Table -->
+<div class="card">
+  <div class="card-header">
+    <h3><span>🕒</span> Recent Customer Orders</h3>
+    <a href="{% url 'order_list' %}" class="btn btn-secondary btn-sm">View All Orders →</a>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Customer Name</th>
+            <th>Phone</th>
+            <th>Date & Time</th>
+            <th>Total Amount</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in stats.recent_orders %}
+          <tr>
+            <td><strong>#{{ order.order_id }}</strong></td>
+            <td>{{ order.customer_name }}</td>
+            <td>{{ order.customer_phone }}</td>
+            <td>{{ order.order_date }}</td>
+            <td><strong>₹{{ order.total_amount }}</strong></td>
+            <td>
+              <span class="badge badge-{{ order.status|lower }}">{{ order.status }}</span>
+            </td>
+            <td>
+              <a href="{% url 'order_details' order.order_id %}" class="btn btn-secondary btn-sm">View</a>
+              <a href="{% url 'billing_order' order.order_id %}" class="btn btn-primary btn-sm">Bill</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">
+              No orders found yet. <a href="{% url 'order_create' %}">Create your first order</a>.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

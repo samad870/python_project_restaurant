@@ -1,0 +1,6 @@
+# Restaurant Management System - Dependencies
+# This project uses ONLY Django and standard Python libraries (csv, decimal, datetime).
+# No database or third-party frontend dependencies are required.
+
+Django>=5.0.0
+

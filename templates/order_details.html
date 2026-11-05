@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}Order #{{ order.order_id }} - The Golden Spoon Restaurant{% endblock %}
+{% block page_heading %}Order Details (#{{ order.order_id }}){% endblock %}
+{% block page_subheading %}Order summary, item breakdown, and status management{% endblock %}
+
+{% block content %}
+<div style="display: flex; gap: 20px; margin-bottom: 24px; flex-wrap: wrap;">
+  <a href="{% url 'order_list' %}" class="btn btn-secondary">
+    ← Back to Orders
+  </a>
+  <a href="{% url 'billing_order' order.order_id %}" class="btn btn-primary">
+    🧾 Generate & Print Bill
+  </a>
+</div>
+
+<div class="crud-grid">
+  <!-- Left Side: Order Meta & Status Update -->
+  <div>
+    <!-- Order Summary Card -->
+    <div class="card">
+      <div class="card-header">
+        <h3><span>📋</span> Order Summary</h3>
+        <span class="badge badge-{{ order.status|lower }}">{{ order.status }}</span>
+      </div>
+      <div class="card-body">
+        <p style="margin-bottom: 8px;"><strong>Order ID:</strong> #{{ order.order_id }}</p>
+        <p style="margin-bottom: 8px;"><strong>Order Date:</strong> {{ order.order_date }}</p>
+        <p style="margin-bottom: 8px;">
+          <strong>Total Amount:</strong>
+          <span style="font-size: 18px; font-weight: 700; color: var(--primary);">
+            ₹{{ order.total_amount }}
+          </span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Customer Card -->
+    <div class="card">
+      <div class="card-header">
+        <h3><span>👤</span> Customer Information</h3>
+      </div>
+      <div class="card-body">
+        <p style="margin-bottom: 8px;"><strong>Customer ID:</strong> {{ customer.customer_id }}</p>
+        <p style="margin-bottom: 8px;"><strong>Full Name:</strong> {{ customer.name }}</p>
+        <p style="margin-bottom: 8px;"><strong>Phone Number:</strong> {{ customer.phone }}</p>
+      </div>
+    </div>
+
+    <!-- Update Status Card -->
+    <div class="card">
+      <div class="card-header">
+        <h3><span>⚙️</span> Update Order Status</h3>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{% url 'order_status_update' order.order_id %}">
+          {% csrf_token %}
+          <div class="form-group">
+            <label for="status">Select New Status</label>
+            <select name="status" id="status" class="form-control">
+              {% for st in statuses %}
+                <option value="{{ st }}" {% if order.status == st %}selected{% endif %}>
+                  {{ st }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">
+            Update Status
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: Order Items Table -->
+  <div class="card">
+    <div class="card-header">
+      <h3><span>🍽️</span> Ordered Items (Snapshot at Order Time)</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Food Item Name</th>
+              <th>Unit Price (₹)</th>
+              <th>Quantity</th>
+              <th>Subtotal (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td><strong>{{ item.item_name }}</strong></td>
+              <td>₹{{ item.unit_price }}</td>
+              <td><strong>{{ item.quantity }}</strong></td>
+              <td><strong>₹{{ item.subtotal }}</strong></td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" style="text-align: center; padding: 24px; color: var(--text-muted);">
+                No item records found for this order.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div style="padding: 20px 24px; background: #fffaf5; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; align-items: center; gap: 16px;">
+        <span style="font-size: 14px; color: var(--text-muted);">Final Order Total:</span>
+        <h3 style="font-size: 24px; font-weight: 800; color: var(--primary);">
+          ₹{{ order.total_amount }}
+        </h3>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

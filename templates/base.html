@@ -1,0 +1,92 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}The Golden Spoon - Restaurant Management System{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+  <div class="app-wrapper">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">🍽️</div>
+        <div class="brand-title">
+          <h1>Golden Spoon</h1>
+          <span>Restaurant System</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="{% url 'dashboard' %}" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+          <span class="nav-icon">📊</span>
+          <span>Dashboard</span>
+        </a>
+        <a href="{% url 'customer_list' %}" class="nav-link {% if active_page == 'customers' %}active{% endif %}">
+          <span class="nav-icon">👥</span>
+          <span>Customers</span>
+        </a>
+        <a href="{% url 'menu_list' %}" class="nav-link {% if active_page == 'menu' %}active{% endif %}">
+          <span class="nav-icon">🍔</span>
+          <span>Food Menu</span>
+        </a>
+        <a href="{% url 'order_list' %}" class="nav-link {% if active_page == 'orders' or active_page == 'order_create' %}active{% endif %}">
+          <span class="nav-icon">📋</span>
+          <span>Orders</span>
+        </a>
+        <a href="{% url 'billing' %}" class="nav-link {% if active_page == 'billing' %}active{% endif %}">
+          <span class="nav-icon">🧾</span>
+          <span>Billing & Invoice</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <strong>The Golden Spoon</strong>
+        <span>Management System</span>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Topbar Header -->
+      <header class="topbar">
+        <div class="page-header">
+          <h2>{% block page_heading %}Restaurant Dashboard{% endblock %}</h2>
+          <p>{% block page_subheading %}Overview & Live Restaurant Records{% endblock %}</p>
+        </div>
+        <div class="topbar-actions">
+          <a href="{% url 'order_create' %}" class="btn btn-primary btn-sm">
+            <span>➕</span> New Order
+          </a>
+        </div>
+      </header>
+
+      <!-- Content Body -->
+      <section class="content-body">
+        <!-- Flash Messages -->
+        {% if messages %}
+        <div class="alert-container">
+          {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}">
+            <span>
+              {% if message.tags == 'success' %}✅{% else %}⚠️{% endif %}
+              {{ message }}
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}
+        <!-- Page specific content will go here -->
+        {% endblock %}
+      </section>
+    </main>
+  </div>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
+

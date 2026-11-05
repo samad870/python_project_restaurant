@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block title %}Billing & Receipt - The Golden Spoon Restaurant{% endblock %}
+{% block page_heading %}Billing & Receipt Generation{% endblock %}
+{% block page_subheading %}Generate, inspect, and print professional restaurant receipts{% endblock %}
+
+{% block content %}
+<!-- Order Selector Card (Hidden on Print) -->
+<div class="card order-selector-card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <h3><span>🧾</span> Select Order to Generate Bill</h3>
+  </div>
+  <div class="card-body">
+    <form method="GET" action="{% url 'billing' %}" style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
+      <div class="form-group" style="flex: 1; min-width: 300px; margin-bottom: 0;">
+        <label for="order_id">Choose Order</label>
+        <select name="order_id" id="order_id" class="form-control" onchange="this.form.submit()">
+          <option value="">-- Choose an Order --</option>
+          {% for o in all_orders %}
+            <option value="{{ o.order_id }}" {% if o.order_id == selected_order_id %}selected{% endif %}>
+              #{{ o.order_id }} — {{ o.customer_name }} (₹{{ o.total_amount }}) [{{ o.status }}]
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-secondary">
+        <span>🔍</span> Load Bill
+      </button>
+
+      {% if bill %}
+      <button type="button" class="btn btn-primary" onclick="window.print()">
+        <span>🖨️</span> Print Bill Receipt
+      </button>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+{% if bill %}
+<!-- Printable Bill Receipt Container -->
+<div class="bill-wrapper">
+  <!-- Bill Header -->
+  <div class="bill-header">
+    <h1>{{ bill.restaurant.name }}</h1>
+    <p class="tagline">{{ bill.restaurant.tagline }}</p>
+    <p class="address">{{ bill.restaurant.address }}</p>
+    <p class="address">Phone: {{ bill.restaurant.phone }} | GSTIN: {{ bill.restaurant.gstin }}</p>
+  </div>
+
+  <!-- Meta Info -->
+  <div class="bill-meta">
+    <div class="bill-meta-col">
+      <div><strong>Receipt No:</strong> {{ bill.bill_no }}</div>
+      <div><strong>Order ID:</strong> #{{ bill.order.order_id }}</div>
+      <div><strong>Date & Time:</strong> {{ bill.order.order_date }}</div>
+      <div>
+        <strong>Status:</strong>
+        <span class="badge badge-{{ bill.order.status|lower }}">{{ bill.order.status }}</span>
+      </div>
+    </div>
+
+    <div class="bill-meta-col" style="text-align: right;">
+      <div><strong>Customer:</strong> {{ bill.customer.name }}</div>
+      <div><strong>Phone:</strong> {{ bill.customer.phone }}</div>
+      <div><strong>Customer ID:</strong> {{ bill.customer.customer_id }}</div>
+      <div><strong>Payment Mode:</strong> Counter Cash</div>
+    </div>
+  </div>
+
+  <!-- Items Table -->
+  <table class="bill-table">
+    <thead>
+      <tr>
+        <th style="width: 40px; text-align: left;">#</th>
+        <th style="text-align: left;">Item Description</th>
+        <th style="text-align: right; width: 100px;">Price (₹)</th>
+        <th style="text-align: center; width: 60px;">Qty</th>
+        <th style="text-align: right; width: 110px;">Subtotal (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in bill.items %}
+      <tr>
+        <td>{{ item.s_no }}</td>
+        <td><strong>{{ item.item_name }}</strong></td>
+        <td style="text-align: right;">₹{{ item.unit_price }}</td>
+        <td style="text-align: center;">{{ item.quantity }}</td>
+        <td style="text-align: right;"><strong>₹{{ item.subtotal }}</strong></td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" style="text-align: center; padding: 20px;">No items listed on this order.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Calculation Summary -->
+  <div class="bill-summary">
+    <div class="bill-summary-row">
+      <span>Items Subtotal:</span>
+      <span>₹{{ bill.subtotal }}</span>
+    </div>
+    <div class="bill-summary-row total">
+      <span>Final Bill Total:</span>
+      <span>₹{{ bill.final_total }}</span>
+    </div>
+  </div>
+
+  {% if bill.is_cancelled %}
+  <div style="margin-top: 16px; padding: 10px; background: var(--danger-bg); color: var(--danger); text-align: center; font-weight: 700; border-radius: 4px;">
+    ⚠️ NOTICE: THIS ORDER HAS BEEN CANCELLED
+  </div>
+  {% endif %}
+
+  <!-- Bill Footer -->
+  <div class="bill-footer">
+    <p>*** Thank You For Dining With Us! Visit Again! ***</p>
+    <p style="margin-top: 4px; font-size: 11px;">
+      This is a computer-generated receipt produced by Restaurant Management System.
+    </p>
+  </div>
+
+  <!-- Screen Action Buttons (Hidden when printed) -->
+  <div class="bill-actions">
+    <button type="button" class="btn btn-primary" onclick="window.print()">
+      <span>🖨️</span> Print Bill Receipt
+    </button>
+    <a href="{% url 'order_details' bill.order.order_id %}" class="btn btn-secondary">
+      View Order Details
+    </a>
+    <a href="{% url 'order_list' %}" class="btn btn-secondary">
+      Back to Orders
+    </a>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body" style="text-align: center; padding: 48px 24px;">
+    <div style="font-size: 48px; margin-bottom: 12px;">🧾</div>
+    <h3 style="color: var(--text-dark); margin-bottom: 8px;">No Order Selected</h3>
+    <p style="color: var(--text-muted); margin-bottom: 20px;">
+      Please select an order from the dropdown above to view and print its bill, or create a new order.
+    </p>
+    <a href="{% url 'order_create' %}" class="btn btn-primary">
+      <span>➕</span> Place New Order
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+

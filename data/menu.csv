@@ -1,0 +1,10 @@
+item_id,item_name,category,price
+ITEM101,Burger,Fast Food,100.00
+ITEM102,Pizza,Fast Food,200.00
+ITEM103,Sandwich,Snacks,80.00
+ITEM104,Cold Coffee,Beverages,90.00
+ITEM105,French Fries,Snacks,70.00
+ITEM106,Veg Noodles,Main Course,120.00
+ITEM107,Paneer Tikka,Main Course,180.00
+ITEM108,Chocolate Shake,Beverages,110.00
+

@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}Orders - The Golden Spoon Restaurant{% endblock %}
+{% block page_heading %}Order Management{% endblock %}
+{% block page_subheading %}Track, filter, update statuses, and view all restaurant orders{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3><span>📋</span> Customer Orders ({{ total_count }})</h3>
+    <a href="{% url 'order_create' %}" class="btn btn-primary">
+      <span>➕</span> Place New Order
+    </a>
+  </div>
+  <div class="card-body">
+    <!-- Filter and Search Bar -->
+    <form method="GET" action="{% url 'order_list' %}" class="filter-bar">
+      <div class="search-box">
+        <input
+          type="text"
+          name="q"
+          class="form-control"
+          placeholder="Search by Order ID (ORD1001) or customer name..."
+          value="{{ search_query }}"
+        >
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <select name="status" class="form-control" onchange="this.form.submit()">
+          <option value="All">All Statuses</option>
+          {% for st in statuses %}
+            <option value="{{ st }}" {% if selected_status == st %}selected{% endif %}>
+              {{ st }}
+            </option>
+          {% endfor %}
+        </select>
+
+        <button type="submit" class="btn btn-secondary">Filter</button>
+        {% if search_query or selected_status %}
+          <a href="{% url 'order_list' %}" class="btn btn-secondary btn-sm">Reset</a>
+        {% endif %}
+      </div>
+    </form>
+
+    <!-- Orders Table -->
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Customer Name</th>
+            <th>Phone</th>
+            <th>Date & Time</th>
+            <th>Total Amount</th>
+            <th>Status</th>
+            <th>Update Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in orders %}
+          <tr>
+            <td><strong>#{{ order.order_id }}</strong></td>
+            <td><strong>{{ order.customer_name }}</strong></td>
+            <td>{{ order.customer_phone }}</td>
+            <td>{{ order.order_date }}</td>
+            <td><strong style="color: var(--primary);">₹{{ order.total_amount }}</strong></td>
+            <td>
+              <span class="badge badge-{{ order.status|lower }}">{{ order.status }}</span>
+            </td>
+            <td>
+              <!-- Quick Status Update Form -->
+              <form method="POST" action="{% url 'order_status_update' order.order_id %}" style="display: flex; gap: 4px;">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <select name="status" class="form-control" style="padding: 4px 8px; font-size: 12px; height: 32px;" onchange="this.form.submit()">
+                  {% for st in statuses %}
+                    <option value="{{ st }}" {% if order.status == st %}selected{% endif %}>
+                      {{ st }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </form>
+            </td>
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <a href="{% url 'order_details' order.order_id %}" class="btn btn-secondary btn-sm" title="View Items & Details">
+                  👁️ Details
+                </a>
+                <a href="{% url 'billing_order' order.order_id %}" class="btn btn-primary btn-sm" title="Print/View Bill">
+                  🧾 Bill
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 28px; color: var(--text-muted);">
+              {% if search_query or selected_status %}
+                No orders match your filter criteria.
+              {% else %}
+                No orders placed yet. <a href="{% url 'order_create' %}">Click here to place a new order</a>.
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

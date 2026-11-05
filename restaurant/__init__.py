@@ -1,0 +1,2 @@
+# restaurant package initializer
+

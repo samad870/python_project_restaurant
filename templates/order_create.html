@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Order - The Golden Spoon Restaurant{% endblock %}
+{% block page_heading %}Place New Customer Order{% endblock %}
+{% block page_subheading %}Select customer, choose menu items, and place order{% endblock %}
+
+{% block content %}
+<form method="POST" action="{% url 'order_create' %}" id="orderForm">
+  {% csrf_token %}
+
+  <!-- Step 1: Select Customer -->
+  <div class="card">
+    <div class="card-header">
+      <h3><span>1️⃣</span> Step 1: Select Customer</h3>
+      <a href="{% url 'customer_list' %}" class="btn btn-secondary btn-sm" target="_blank">
+        ➕ Register New Customer
+      </a>
+    </div>
+    <div class="card-body">
+      <div class="form-group" style="max-width: 500px; margin-bottom: 0;">
+        <label for="customer_id">Choose Customer *</label>
+        <select name="customer_id" id="customer_id" class="form-control" required>
+          <option value="">-- Select an Existing Customer --</option>
+          {% for c in customers %}
+            <option value="{{ c.customer_id }}">
+              {{ c.name }} ({{ c.phone }}) — [{{ c.customer_id }}]
+            </option>
+          {% endfor %}
+        </select>
+        {% if not customers %}
+          <small style="color: var(--danger);">No customers registered yet. Please register a customer first.</small>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Item Selection Control -->
+  <div class="card">
+    <div class="card-header">
+      <h3><span>2️⃣</span> Step 2: Add Food Items to Order</h3>
+    </div>
+    <div class="card-body">
+      <div style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+        <div class="form-group" style="flex: 2; min-width: 250px; margin-bottom: 0;">
+          <label for="item_select">Select Food Item</label>
+          <select id="item_select" class="form-control">
+            <option value="">-- Choose Menu Item --</option>
+            {% for item in menu_items %}
+              <option
+                value="{{ item.item_id }}"
+                data-name="{{ item.item_name }}"
+                data-price="{{ item.price }}"
+                data-category="{{ item.category }}"
+              >
+                {{ item.item_name }} ({{ item.category }}) — ₹{{ item.price }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group" style="width: 120px; margin-bottom: 0;">
+          <label for="item_qty">Quantity</label>
+          <input type="number" id="item_qty" class="form-control" value="1" min="1" max="100">
+        </div>
+
+        <button type="button" class="btn btn-primary" id="addItemBtn">
+          <span>➕</span> Add Item
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Order Items Summary & Total -->
+  <div class="card">
+    <div class="card-header">
+      <h3><span>3️⃣</span> Step 3: Order Summary & Bill Calculation</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      <div class="table-responsive">
+        <table class="table" id="itemsTable">
+          <thead>
+            <tr>
+              <th style="width: 60px;">#</th>
+              <th>Food Item</th>
+              <th>Unit Price (₹)</th>
+              <th style="width: 140px;">Quantity</th>
+              <th>Subtotal (₹)</th>
+              <th style="width: 100px;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="itemsTableBody">
+            <tr id="emptyRow">
+              <td colspan="6" style="text-align: center; padding: 28px; color: var(--text-muted);">
+                No items added to this order yet. Use Step 2 above to select items.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Order Total & Submit Bar -->
+      <div style="padding: 24px; background: #fffaf5; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <span style="font-size: 13px; color: var(--text-muted); text-transform: uppercase;">Total Items</span>
+          <h4 id="totalItemsCount" style="font-size: 18px; color: var(--text-dark);">0 item(s)</h4>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 24px;">
+          <div style="text-align: right;">
+            <span style="font-size: 13px; color: var(--text-muted); text-transform: uppercase;">Total Order Amount</span>
+            <h3 style="font-size: 28px; font-weight: 800; color: var(--primary);">
+              ₹<span id="grandTotal">0.00</span>
+            </h3>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="placeOrderBtn" style="padding: 12px 28px; font-size: 16px;" disabled>
+            <span>✅</span> Place Order
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Dynamic order items manager (Pure Vanilla JavaScript)
+  let orderItems = [];
+
+  const itemSelect = document.getElementById('item_select');
+  const itemQty = document.getElementById('item_qty');
+  const addItemBtn = document.getElementById('addItemBtn');
+  const itemsTableBody = document.getElementById('itemsTableBody');
+  const emptyRow = document.getElementById('emptyRow');
+  const totalItemsCount = document.getElementById('totalItemsCount');
+  const grandTotal = document.getElementById('grandTotal');
+  const placeOrderBtn = document.getElementById('placeOrderBtn');
+  const orderForm = document.getElementById('orderForm');
+
+  addItemBtn.addEventListener('click', function() {
+    const selectedOption = itemSelect.options[itemSelect.selectedIndex];
+    const itemId = itemSelect.value;
+    const qty = parseInt(itemQty.value) || 1;
+
+    if (!itemId) {
+      alert('Please select a food item from the menu.');
+      return;
+    }
+    if (qty <= 0) {
+      alert('Quantity must be at least 1.');
+      return;
+    }
+
+    const itemName = selectedOption.getAttribute('data-name');
+    const unitPrice = parseFloat(selectedOption.getAttribute('data-price')) || 0.00;
+
+    // Check if item is already added
+    const existingIndex = orderItems.findIndex(i => i.id === itemId);
+    if (existingIndex >= 0) {
+      // Increase quantity
+      orderItems[existingIndex].qty += qty;
+      orderItems[existingIndex].subtotal = orderItems[existingIndex].qty * unitPrice;
+    } else {
+      orderItems.push({
+        id: itemId,
+        name: itemName,
+        unitPrice: unitPrice,
+        qty: qty,
+        subtotal: qty * unitPrice
+      });
+    }
+
+    // Reset selectors
+    itemSelect.value = '';
+    itemQty.value = 1;
+
+    renderOrderTable();
+  });
+
+  function renderOrderTable() {
+    itemsTableBody.innerHTML = '';
+
+    if (orderItems.length === 0) {
+      itemsTableBody.appendChild(emptyRow);
+      totalItemsCount.textContent = '0 item(s)';
+      grandTotal.textContent = '0.00';
+      placeOrderBtn.disabled = true;
+      return;
+    }
+
+    let sum = 0;
+    let totalQty = 0;
+
+    orderItems.forEach((item, index) => {
+      sum += item.subtotal;
+      totalQty += item.qty;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${index + 1}</td>
+        <td>
+          <strong>${item.name}</strong>
+          <input type="hidden" name="item_id[]" value="${item.id}">
+        </td>
+        <td>₹${item.unitPrice.toFixed(2)}</td>
+        <td>
+          <input
+            type="number"
+            class="form-control form-control-sm"
+            style="width: 80px;"
+            min="1"
+            max="100"
+            value="${item.qty}"
+            onchange="updateItemQty(${index}, this.value)"
+            name="quantity[]"
+          >
+        </td>
+        <td><strong>₹${item.subtotal.toFixed(2)}</strong></td>
+        <td>
+          <button type="button" class="btn btn-danger btn-sm" onclick="removeItem(${index})">
+            🗑️ Remove
+          </button>
+        </td>
+      `;
+      itemsTableBody.appendChild(tr);
+    });
+
+    totalItemsCount.textContent = `${totalQty} item(s) (${orderItems.length} unique)`;
+    grandTotal.textContent = sum.toFixed(2);
+    placeOrderBtn.disabled = false;
+  }
+
+  window.updateItemQty = function(index, newQtyStr) {
+    const newQty = parseInt(newQtyStr);
+    if (isNaN(newQty) || newQty <= 0) {
+      alert('Quantity must be at least 1');
+      renderOrderTable();
+      return;
+    }
+    orderItems[index].qty = newQty;
+    orderItems[index].subtotal = newQty * orderItems[index].unitPrice;
+    renderOrderTable();
+  };
+
+  window.removeItem = function(index) {
+    orderItems.splice(index, 1);
+    renderOrderTable();
+  };
+
+  orderForm.addEventListener('submit', function(e) {
+    if (orderItems.length === 0) {
+      e.preventDefault();
+      alert('Please add at least one food item to the order.');
+      return;
+    }
+    const customerSelect = document.getElementById('customer_id');
+    if (!customerSelect.value) {
+      e.preventDefault();
+      alert('Please select an existing customer.');
+      customerSelect.focus();
+      return;
+    }
+  });
+</script>
+{% endblock %}
+
